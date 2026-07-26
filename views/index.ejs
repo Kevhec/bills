@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bills</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <h1>Bills</h1>
+
+    <% if (created) { %>
+        <p><strong>Factura creada correctamente</strong></p>
+    <% } %>
+
+    <a href="/upload">Upload Bill</a>
+
+    <% if (bills.length === 0) { %>
+        <p>No bills yet.</p>
+    <% } else { %>
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Document</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% for (const bill of bills) { %>
+                    <tr>
+                        <td><img src="<%= bill.thumbnail_path %>" alt="Thumbnail" style="width: 150px;"></td>
+                        <td><%= bill.category_name %></td>
+                        <td><%= bill.bill_date %></td>
+                        <td><a href="<%= bill.document_path %>">View</a></td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+
+        <p>Showing <%= offset + 1 %>–<%= Math.min(offset + limit, total) %> of <%= total %> bills</p>
+
+        <div>
+            <% if (offset > 0) { %>
+                <a href="/?offset=0&limit=<%= limit %>">First</a>
+                <a href="/?offset=<%= Math.max(0, offset - limit) %>&limit=<%= limit %>">Prev</a>
+            <% } %>
+            <% if (offset + limit < total) { %>
+                <a href="/?offset=<%= offset + limit %>&limit=<%= limit %>">Next</a>
+                <a href="/?offset=<%= (totalPages - 1) * limit %>&limit=<%= limit %>">Last</a>
+            <% } %>
+        </div>
+    <% } %>
+</body>
+</html>

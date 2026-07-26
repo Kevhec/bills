@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Bill</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <h1>Upload Bill</h1>
+    <form action="/bills" method="POST" enctype="multipart/form-data">
+        <label for="bill_date">Bill Date</label>
+        <input type="date" id="bill_date" name="bill_date" required>
+
+        <label for="category_id">Category</label>
+        <select id="category_id" name="category_id" required>
+            <option value="" disabled selected>Select a category</option>
+        </select>
+
+        <script>
+            fetch('/categories')
+                .then(res => res.json())
+                .then(categories => {
+                    const select = document.getElementById('category_id');
+                    categories.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.name;
+                        select.appendChild(opt);
+                    });
+                });
+        </script>
+
+        <label for="bill">Bill Document</label>
+        <input type="file" id="bill" name="bill" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.tiff,.bmp" required>
+
+        <label for="checks">Check Pages (optional, max 5)</label>
+        <input type="file" id="checks" name="checks" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.tiff,.bmp" multiple>
+
+        <button type="submit">Upload</button>
+    </form>
+</body>
+</html>
