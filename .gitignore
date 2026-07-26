@@ -143,6 +143,8 @@ vite.config.ts.timestamp-*
 
 # Database
 data/*.db
+data/*.db-shm
+data/*.db-wal
 
 # Temp files
 tmp/
