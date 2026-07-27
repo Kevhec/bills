@@ -3,10 +3,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import { DOCUMENTS_DIR, THUMBNAILS_DIR } from '../constant/config.js';
 import { normalizeToPdf, generateThumbnail } from '../services/billAssemblyService.js';
-import { appendPages, savePdf } from '../services/pdfService.js';
+import { normalizePdf, deletePages, appendPages, savePdf } from '../services/pdfService.js';
 import { cleanup } from '../services/fileService.js';
 import { getCategoryById } from '../services/categoryService.js';
-import { getAllBills, createBillRecord } from '../services/billService.js';
+import { getAllBills, getBillById, updateBillPageCount, createBillRecord } from '../services/billService.js';
 
 export async function createBill(req: Request, res: Response, next: NextFunction) {
   try {
@@ -79,12 +79,84 @@ export async function createBill(req: Request, res: Response, next: NextFunction
   }
 }
 
+export async function addChecksHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const bill = getBillById(Number(req.params.id));
+    if (!bill) {
+      res.status(404).json({ error: 'Bill not found' });
+      return;
+    }
+
+    const files = (req.files as { checks?: Express.Multer.File[] })?.checks || [];
+
+    const currentDocPath = path.join(process.cwd(), bill.document_path);
+    let doc = await normalizePdf(currentDocPath);
+
+    const deletePagesRaw = req.body.delete_pages;
+    if (deletePagesRaw) {
+      const pageNumbers = (Array.isArray(deletePagesRaw) ? deletePagesRaw : [deletePagesRaw])
+        .map(Number)
+        .filter((n) => !isNaN(n));
+      if (pageNumbers.length > 0) {
+        doc = deletePages(doc, pageNumbers);
+      }
+    }
+
+    if (files.length > 0) {
+      const checkDocs = await Promise.all(
+        files.map(async (f) => {
+          const d = await normalizeToPdf(f.path, f.mimetype);
+          return d;
+        })
+      );
+      doc = await appendPages(doc, checkDocs);
+    }
+
+    await fs.unlink(currentDocPath);
+    await savePdf(doc, currentDocPath);
+    updateBillPageCount(bill.id, doc.getPageCount());
+
+    await cleanup(files.map((f) => f.path));
+
+    res.redirect(`/bills/${bill.id}/edit?saved=1`);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export function getBillEditHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const bill = getBillById(Number(req.params.id));
+    if (!bill) {
+      res.status(404).json({ error: 'Bill not found' });
+      return;
+    }
+
+    const checkPageCount = Math.max(0, bill.bill_page_count - 1);
+
+    res.render('edit', {
+      bill,
+      checkPageCount,
+      saved: req.query.saved === '1',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export function getAllBillsHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const limit = Math.max(1, Number(req.query.limit) || 10);
+    const limit = Math.max(10, Math.min(30, Number(req.query.limit) || 10));
     const offset = Math.max(0, Number(req.query.offset) || 0);
 
-    const { bills, total } = getAllBills(offset, limit);
+    const categoryRaw = req.query.category;
+    const categories = categoryRaw
+      ? (Array.isArray(categoryRaw) ? categoryRaw : [categoryRaw]).map(Number).filter((n) => !isNaN(n))
+      : undefined;
+
+    const date = typeof req.query.date === 'string' && req.query.date ? req.query.date : undefined;
+
+    const { bills, total } = getAllBills(offset, limit, { categories, date });
     const totalPages = Math.ceil(total / limit);
 
     res.render('index', {
@@ -94,6 +166,7 @@ export function getAllBillsHandler(req: Request, res: Response, next: NextFuncti
       total,
       totalPages,
       created: req.query.created === '1',
+      filters: { categories: categories || [], date: date || '' },
     });
   } catch (err) {
     next(err);

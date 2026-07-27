@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar — <%= bill.category_name %></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <a href="/">&larr; Volver</a>
+
+    <h1>Editar — <%= bill.category_name %></h1>
+
+    <% if (saved) { %>
+        <p><strong>Guardado correctamente</strong></p>
+    <% } %>
+
+    <img src="<%= bill.thumbnail_path %>" alt="Thumbnail" style="max-width: 300px; border-radius: 8px; margin-bottom: 1.5rem;">
+    <br>
+    <a href="<%= bill.document_path %>" target="_blank">Ver PDF</a>
+
+    <form action="/bills/<%= bill.id %>/checks" method="POST" enctype="multipart/form-data">
+        <fieldset>
+            <legend>Eliminar cheques</legend>
+            <% if (checkPageCount === 0) { %>
+                <p>No hay páginas de cheques para eliminar.</p>
+            <% } else { %>
+                <% for (let i = 2; i <= bill.bill_page_count; i++) { %>
+                    <label>
+                        <input type="checkbox" name="delete_pages" value="<%= i %>">
+                        Página <%= i %>
+                    </label>
+                <% } %>
+            <% } %>
+        </fieldset>
+
+        <fieldset>
+            <legend>Agregar cheques</legend>
+            <label for="checks">Archivos de cheques (máximo 5)</label>
+            <input type="file" id="checks" name="checks" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.tiff,.bmp" multiple>
+        </fieldset>
+
+        <button type="submit">Guardar cambios</button>
+    </form>
+</body>
+</html>

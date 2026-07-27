@@ -50,6 +50,14 @@ export async function appendPages(target: PDFDocument, sources: PDFDocument[]): 
   return target;
 }
 
+export function deletePages(doc: PDFDocument, pageNumbers: number[]): PDFDocument {
+  const sorted = [...pageNumbers].sort((a, b) => b - a);
+  for (const num of sorted) {
+    doc.removePage(num - 1);
+  }
+  return doc;
+}
+
 export async function savePdf(doc: PDFDocument, savePath: string): Promise<Uint8Array> {
   const pdfBytes = await doc.save();
   await fs.writeFile(savePath, pdfBytes);

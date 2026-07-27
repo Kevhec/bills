@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,11 +13,48 @@
         <p><strong>Factura creada correctamente</strong></p>
     <% } %>
 
-    <a href="/upload">Upload Bill</a>
+    <div>
+        <a href="/upload">Upload Bill</a>
+        <button onclick="document.getElementById('filter-dialog').showModal()">Filtrar</button>
+    </div>
+
+    <dialog id="filter-dialog">
+        <form method="GET" action="/">
+            <input type="hidden" name="offset" value="0">
+
+            <fieldset>
+                <legend>Categoría</legend>
+                <div id="category-checkboxes"></div>
+            </fieldset>
+
+            <label for="filter-date">Fecha</label>
+            <input type="date" id="filter-date" name="date" value="<%= filters.date %>">
+
+            <label for="filter-limit">Elementos por página</label>
+            <select id="filter-limit" name="limit">
+                <option value="10" <%= limit === 10 ? 'selected' : '' %>>10</option>
+                <option value="20" <%= limit === 20 ? 'selected' : '' %>>20</option>
+                <option value="30" <%= limit === 30 ? 'selected' : '' %>>30</option>
+            </select>
+
+            <div>
+                <button type="submit">Aplicar</button>
+                <button type="button" onclick="document.getElementById('filter-dialog').close()">Cancelar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <% const filterParams = new URLSearchParams(); %>
+    <% filters.categories.forEach(function(c) { filterParams.append('category', c); }); %>
+    <% if (filters.date) { filterParams.set('date', filters.date); } %>
+    <% filterParams.set('limit', limit); %>
+    <% const filterQS = filterParams.toString(); %>
 
     <% if (bills.length === 0) { %>
         <p>No bills yet.</p>
     <% } else { %>
+        <a href="/export?<%= filterQS %>">Exportar documentos (<%= total %>)</a>
+
         <table>
             <thead>
                 <tr>
@@ -33,7 +70,11 @@
                         <td><img src="<%= bill.thumbnail_path %>" alt="Thumbnail" style="width: 150px;"></td>
                         <td><%= bill.category_name %></td>
                         <td><%= bill.bill_date %></td>
-                        <td><a href="<%= bill.document_path %>">View</a></td>
+                        <td>
+                            <a href="<%= bill.document_path %>" target="_blank">View</a>
+                            <a href="<%= bill.document_path %>" download>Download</a>
+                            <a href="/bills/<%= bill.id %>/edit">Edit</a>
+                        </td>
                     </tr>
                 <% } %>
             </tbody>
@@ -43,14 +84,36 @@
 
         <div>
             <% if (offset > 0) { %>
-                <a href="/?offset=0&limit=<%= limit %>">First</a>
-                <a href="/?offset=<%= Math.max(0, offset - limit) %>&limit=<%= limit %>">Prev</a>
+                <a href="/?<%= filterQS %>&offset=0">First</a>
+                <a href="/?<%= filterQS %>&offset=<%= Math.max(0, offset - limit) %>">Prev</a>
             <% } %>
             <% if (offset + limit < total) { %>
-                <a href="/?offset=<%= offset + limit %>&limit=<%= limit %>">Next</a>
-                <a href="/?offset=<%= (totalPages - 1) * limit %>&limit=<%= limit %>">Last</a>
+                <a href="/?<%= filterQS %>&offset=<%= offset + limit %>">Next</a>
+                <a href="/?<%= filterQS %>&offset=<%= (totalPages - 1) * limit %>">Last</a>
             <% } %>
         </div>
     <% } %>
+
+    <script>
+        const selectedCategories = <%- JSON.stringify(filters.categories) %>;
+        fetch('/categories')
+            .then(res => res.json())
+            .then(categories => {
+                const container = document.getElementById('category-checkboxes');
+                categories.forEach(c => {
+                    const label = document.createElement('label');
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.name = 'category';
+                    input.value = c.id;
+                    if (selectedCategories.includes(c.id)) {
+                        input.checked = true;
+                    }
+                    label.appendChild(input);
+                    label.appendChild(document.createTextNode(' ' + c.name));
+                    container.appendChild(label);
+                });
+            });
+    </script>
 </body>
 </html>
